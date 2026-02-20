@@ -1,4 +1,7 @@
-const API_BASE_URL = 'http://localhost:5000/api';
+// API base URL - automatically detects environment
+const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? 'http://localhost:5000/api'
+  : 'https://budget-management-api-tqch.onrender.com/api';
 
 // Check if we're on login or register page
 const isLoginPage = window.location.pathname.includes('login.html') || 

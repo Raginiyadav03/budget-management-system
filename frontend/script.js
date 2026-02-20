@@ -1,5 +1,7 @@
-// API base URL
-const API_URL = 'http://localhost:5000/api';
+// API base URL - automatically detects environment
+const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? 'http://localhost:5000/api'
+  : 'https://budget-management-api-tqch.onrender.com/api';
 
 // Get user ID
 function getUserId() {
