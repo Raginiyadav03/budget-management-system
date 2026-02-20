@@ -3,13 +3,15 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const Transaction = require("./models/Transaction");
 const User = require("./models/User");
+require("dotenv").config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 // MongoDB connection string
-const MONGODB_URI = "mongodb+srv://ragini:ragini0304@sachin.vgvc0bb.mongodb.net/budgetManagement?retryWrites=true&w=majority";
+const MONGODB_URI = process.env.MONGODB_URI
+const PORT = process.env.PORT || 5000;
 
 // Connect to MongoDB
 mongoose.connect(MONGODB_URI)
