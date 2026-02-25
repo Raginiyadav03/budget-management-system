@@ -1,5 +1,6 @@
 // API base URL - automatically detects environment
-const API_URL = 'https://budget-management-api-tqch.onrender.com/api';
+// const API_URL = 'https://budget-management-api-tqch.onrender.com/api';
+const API_URL = 'http://localhost:5000/api';
 
 // Get user ID
 function getUserId() {
@@ -28,6 +29,9 @@ const transactionForm = document.getElementById('transactionForm');
 const editForm = document.getElementById('editForm');
 const transactionsList = document.getElementById('transactionsList');
 const totalBalance = document.getElementById('totalBalance');
+const totalIncome = document.getElementById('totalIncome');
+const totalExpense = document.getElementById('totalExpense');
+const savingStatus = document.getElementById('savingStatus');
 const filterButtons = document.querySelectorAll('.filter-btn');
 const editModal = document.getElementById('editModal');
 const alertPopup = document.getElementById('alertPopup');
@@ -56,8 +60,14 @@ function hideLoading() {
 let currentFilter = 'all';
 let currentEditId = null;
 let currentPage = 1;
+let allTransactions = []; // Store all transactions for search
+let searchQuery = ''; // Current search query
 let itemsPerPage = 5;
 let paginationData = null;
+let selectedMonth = ''; // Current month filter
+let selectedAmountFilter = ''; // Current amount filter (above1000, below500, between)
+let amountFrom = ''; // Amount range from
+let amountTo = ''; // Amount range to
 
 // Helper function to get current local datetime string
 function getCurrentDateTimeString() {
@@ -77,8 +87,23 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
     
-    // Display user info and logout button
+    // Initialize theme
+    initializeTheme();
+    
+    // Display user info and account dropdown
     displayUserInfo();
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(event) {
+        const accountDropdown = document.getElementById('accountDropdown');
+        const accountIconBtn = document.querySelector('.account-icon-btn');
+        
+        if (accountDropdown && accountIconBtn && 
+            !accountDropdown.contains(event.target) && 
+            !accountIconBtn.contains(event.target)) {
+            accountDropdown.classList.remove('show');
+        }
+    });
     
     // Set current date and time as default (local time)
     document.getElementById('date').value = getCurrentDateTimeString();
@@ -107,21 +132,93 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 });
 
-// Display user info and logout button
+// Display user info and account dropdown
 function displayUserInfo() {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const headerTop = document.querySelector('.header-top');
+    const headerRight = document.querySelector('.header-right');
     
-    if (headerTop && user.name) {
+    if (headerRight && user.name) {
         const userInfo = document.createElement('div');
         userInfo.className = 'user-info';
         userInfo.innerHTML = `
             <span>Welcome, ${escapeHtml(user.name)}</span>
-            <button class="btn-logout" onclick="handleLogout()">Logout</button>
+            <div class="account-dropdown">
+                <button class="account-icon-btn" onclick="toggleAccountDropdown()" aria-label="Account menu">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                </button>
+                <div class="dropdown-menu" id="accountDropdown">
+                    <a href="#" class="dropdown-item" onclick="handleMyAccount(); return false;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                        My Account
+                    </a>
+                    <a href="#" class="dropdown-item" onclick="handleLogout(); return false;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                            <polyline points="16 17 21 12 16 7"></polyline>
+                            <line x1="21" y1="12" x2="9" y2="12"></line>
+                        </svg>
+                        Logout
+                    </a>
+                </div>
+            </div>
         `;
-        headerTop.appendChild(userInfo);
+        headerRight.appendChild(userInfo);
     }
 }
+
+// Theme management
+function initializeTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.body.classList.toggle('dark-mode', savedTheme === 'dark');
+    updateThemeIcon(savedTheme);
+}
+
+window.toggleTheme = function() {
+    const isDark = document.body.classList.contains('dark-mode');
+    const newTheme = isDark ? 'light' : 'dark';
+    
+    document.body.classList.toggle('dark-mode');
+    localStorage.setItem('theme', newTheme);
+    updateThemeIcon(newTheme);
+};
+
+function updateThemeIcon(theme) {
+    const sunIcon = document.querySelector('.sun-icon');
+    const moonIcon = document.querySelector('.moon-icon');
+    
+    if (sunIcon && moonIcon) {
+        if (theme === 'dark') {
+            sunIcon.style.display = 'none';
+            moonIcon.style.display = 'block';
+        } else {
+            sunIcon.style.display = 'block';
+            moonIcon.style.display = 'none';
+        }
+    }
+}
+
+// Toggle account dropdown
+window.toggleAccountDropdown = function() {
+    const dropdown = document.getElementById('accountDropdown');
+    if (dropdown) {
+        dropdown.classList.toggle('show');
+    }
+};
+
+// Handle My Account
+window.handleMyAccount = function() {
+    const dropdown = document.getElementById('accountDropdown');
+    if (dropdown) {
+        dropdown.classList.remove('show');
+    }
+    window.location.href = 'account.html';
+};
 
 // Popup functions
 function showAlert(message) {
@@ -149,6 +246,10 @@ window.closeConfirm = function(result) {
 
 // Handle logout (global function for onclick)
 window.handleLogout = function() {
+    const dropdown = document.getElementById('accountDropdown');
+    if (dropdown) {
+        dropdown.classList.remove('show');
+    }
     showConfirm('Are you sure you want to logout?', (confirmed) => {
         if (confirmed) {
             localStorage.removeItem('userId');
@@ -204,7 +305,8 @@ async function loadTransactions(page = currentPage) {
     showLoading();
     try {
         const userId = getUserId();
-        const response = await fetch(`${API_URL}/transactions?userId=${userId}&page=${page}&limit=${itemsPerPage}`, {
+        const url = `${API_URL}/transactions?userId=${userId}&page=${page}&limit=${itemsPerPage}&filter=${currentFilter}`;
+        const response = await fetch(url, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
@@ -225,14 +327,31 @@ async function loadTransactions(page = currentPage) {
             paginationData = data.pagination;
             currentPage = data.pagination.currentPage;
             
-            // Apply filter on frontend (since backend doesn't support filter)
-            let filteredTransactions = data.transactions;
-            if (currentFilter !== 'all') {
-                filteredTransactions = data.transactions.filter(t => t.type === currentFilter);
+            // Store all transactions for search functionality
+            allTransactions = data.transactions;
+            
+            // Apply all filters (search, month, amount)
+            let transactionsToDisplay = allTransactions;
+            
+            // Apply search filter
+            if (searchQuery.trim()) {
+                transactionsToDisplay = filterTransactionsBySearch(transactionsToDisplay, searchQuery);
             }
             
-            displayTransactions(filteredTransactions);
+            // Apply month filter
+            if (selectedMonth) {
+                transactionsToDisplay = filterTransactionsByMonth(transactionsToDisplay, selectedMonth);
+            }
+            
+            // Apply amount filter
+            if (selectedAmountFilter) {
+                transactionsToDisplay = filterTransactionsByAmount(transactionsToDisplay, selectedAmountFilter, amountFrom, amountTo);
+            }
+            
+            displayTransactions(transactionsToDisplay);
             updateBalanceFromTotal(data.totalBalance);
+            updateIncomeAndExpense(data.totalIncome || 0, data.totalExpense || 0);
+            updateSavingStatus(data.savingStatus);
             displayPagination();
             hideLoading();
         } else {
@@ -279,6 +398,23 @@ function updateBalanceFromTotal(balance) {
     totalBalance.style.color = balance >= 0 ? '#28a745' : '#dc3545';
 }
 
+// Update income and expense totals
+function updateIncomeAndExpense(income, expense) {
+    totalIncome.textContent = `₹${income.toFixed(2)}`;
+    totalExpense.textContent = `₹${expense.toFixed(2)}`;
+}
+
+// Update saving status
+function updateSavingStatus(statusData) {
+    if (statusData && statusData.status) {
+        savingStatus.textContent = statusData.status;
+        savingStatus.style.color = statusData.color || '#667eea';
+    } else {
+        savingStatus.textContent = '-';
+        savingStatus.style.color = '#667eea';
+    }
+}
+
 // Delete transaction
 async function deleteTransaction(id) {
     showConfirm('Are you sure you want to delete this transaction?', async (confirmed) => {
@@ -311,9 +447,172 @@ async function deleteTransaction(id) {
     });
 }
 
+// Filter transactions by search query
+function filterTransactionsBySearch(transactions, query) {
+    if (!query || !query.trim()) {
+        return transactions;
+    }
+    
+    const searchTerm = query.toLowerCase().trim();
+    
+    return transactions.filter(transaction => {
+        // Search in description
+        const descriptionMatch = transaction.description.toLowerCase().includes(searchTerm);
+        
+        // Search in amount
+        const amountMatch = transaction.amount.toString().includes(searchTerm);
+        
+        // Search in formatted date
+        const dateMatch = formatDate(transaction.date).toLowerCase().includes(searchTerm);
+        
+        // Search in type
+        const typeMatch = transaction.type.toLowerCase().includes(searchTerm);
+        
+        return descriptionMatch || amountMatch || dateMatch || typeMatch;
+    });
+}
+
+// Filter transactions by month
+function filterTransactionsByMonth(transactions, month) {
+    if (!month) {
+        return transactions;
+    }
+    
+    return transactions.filter(transaction => {
+        const transactionDate = new Date(transaction.date);
+        const transactionMonth = String(transactionDate.getMonth() + 1).padStart(2, '0');
+        return transactionMonth === month;
+    });
+}
+
+// Filter transactions by amount
+function filterTransactionsByAmount(transactions, filterType, from, to) {
+    if (!filterType) {
+        return transactions;
+    }
+    
+    return transactions.filter(transaction => {
+        const amount = transaction.amount;
+        
+        switch(filterType) {
+            case 'above1000':
+                return amount > 1000;
+            case 'below500':
+                return amount < 500;
+            case 'between':
+                const fromAmount = parseFloat(from) || 0;
+                const toAmount = parseFloat(to) || Infinity;
+                return amount >= fromAmount && amount <= toAmount;
+            default:
+                return true;
+        }
+    });
+}
+
+// Apply all active filters and display results
+function applyAllFilters() {
+    let filteredTransactions = allTransactions;
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+        filteredTransactions = filterTransactionsBySearch(filteredTransactions, searchQuery);
+    }
+    
+    // Apply month filter
+    if (selectedMonth) {
+        filteredTransactions = filterTransactionsByMonth(filteredTransactions, selectedMonth);
+    }
+    
+    // Apply amount filter
+    if (selectedAmountFilter) {
+        filteredTransactions = filterTransactionsByAmount(filteredTransactions, selectedAmountFilter, amountFrom, amountTo);
+    }
+    
+    // Display filtered transactions
+    displayTransactions(filteredTransactions);
+    
+    // Hide pagination when any filter is active
+    if (searchQuery.trim() || selectedMonth || selectedAmountFilter) {
+        document.getElementById('paginationContainer').innerHTML = '';
+    } else {
+        displayPagination();
+    }
+}
+
+// Handle search
+window.handleSearch = function() {
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchQuery = searchInput.value;
+        applyAllFilters();
+    }
+};
+
+// Handle month filter
+window.handleMonthFilter = function() {
+    const monthSelect = document.getElementById('monthFilter');
+    if (monthSelect) {
+        selectedMonth = monthSelect.value;
+        applyAllFilters();
+    }
+};
+
+// Handle amount filter
+window.handleAmountFilter = function() {
+    const amountSelect = document.getElementById('amountFilter');
+    const betweenGroup = document.getElementById('betweenAmountGroup');
+    
+    if (amountSelect) {
+        selectedAmountFilter = amountSelect.value;
+        
+        // Show/hide between amount inputs
+        if (selectedAmountFilter === 'between') {
+            betweenGroup.style.display = 'flex';
+            amountFrom = document.getElementById('amountFrom')?.value || '';
+            amountTo = document.getElementById('amountTo')?.value || '';
+        } else {
+            betweenGroup.style.display = 'none';
+            amountFrom = '';
+            amountTo = '';
+        }
+        
+        applyAllFilters();
+    }
+};
+
 // Handle filter
 function handleFilter(filter) {
     currentFilter = filter;
+    currentPage = 1; // Reset to page 1 when filter changes
+    
+    // Clear advanced filters when changing type filter
+    const searchInput = document.getElementById('searchInput');
+    const monthSelect = document.getElementById('monthFilter');
+    const amountSelect = document.getElementById('amountFilter');
+    const betweenGroup = document.getElementById('betweenAmountGroup');
+    
+    if (searchInput) {
+        searchInput.value = '';
+        searchQuery = '';
+    }
+    
+    if (monthSelect) {
+        monthSelect.value = '';
+        selectedMonth = '';
+    }
+    
+    if (amountSelect) {
+        amountSelect.value = '';
+        selectedAmountFilter = '';
+    }
+    
+    if (betweenGroup) {
+        betweenGroup.style.display = 'none';
+        amountFrom = '';
+        amountTo = '';
+        document.getElementById('amountFrom').value = '';
+        document.getElementById('amountTo').value = '';
+    }
     
     // Update active button
     filterButtons.forEach(btn => {

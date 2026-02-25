@@ -18,6 +18,40 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     minlength: 6
+  },
+  balance:{
+    type: Number,
+    default: 0
+  },
+  income:{
+    type: Number,
+    default: 0
+  },
+  expense:{
+    type: Number,
+    default: 0
+  },
+  totalBalance: {
+    type: Number,
+    default: 0
+  },
+  totalIncome: {
+    type: Number,
+    default: 0
+  },
+  totalExpense: {
+    type: Number,
+    default: 0
+  },
+  savingStatus: {
+    status: {
+      type: String,
+      default: 'No Data'
+    },
+    color: {
+      type: String,
+      default: '#6c757d'
+    }
   }
 }, {
   timestamps: true

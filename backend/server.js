@@ -33,6 +33,85 @@ const getUserId = (req, res, next) => {
   next();
 };
 
+// Function to calculate and update user statistics
+async function updateUserStatistics(userId) {
+  try {
+    // Calculate total income and expense using aggregation
+    const balanceResult = await Transaction.aggregate([
+      { $match: { user: new mongoose.Types.ObjectId(userId) } },
+      {
+        $group: {
+          _id: null,
+          totalIncome: {
+            $sum: {
+              $cond: [{ $eq: ["$type", "income"] }, "$amount", 0]
+            }
+          },
+          totalExpense: {
+            $sum: {
+              $cond: [{ $eq: ["$type", "expense"] }, "$amount", 0]
+            }
+          }
+        }
+      }
+    ]);
+
+    const totalIncome = balanceResult.length > 0 ? balanceResult[0].totalIncome : 0;
+    const totalExpense = balanceResult.length > 0 ? balanceResult[0].totalExpense : 0;
+    const totalBalance = totalIncome - totalExpense;
+
+    // Calculate saving status
+    let savingStatus = {
+      status: '',
+      color: ''
+    };
+
+    if (totalExpense > totalIncome) {
+      savingStatus.status = 'Overspending';
+      savingStatus.color = '#dc3545'; // red
+    } else if (totalIncome === 0 && totalExpense === 0) {
+      savingStatus.status = 'No Data';
+      savingStatus.color = '#6c757d'; // gray
+    } else if (totalIncome === 0) {
+      savingStatus.status = 'Overspending';
+      savingStatus.color = '#dc3545'; // red
+    } else if (totalExpense === totalIncome) {
+      savingStatus.status = 'No Saving';
+      savingStatus.color = '#dc3545'; // red
+    } else {
+      const savings = totalIncome - totalExpense;
+      const savingsPercentage = (savings / totalIncome) * 100;
+
+      if (savingsPercentage >= 50) {
+        savingStatus.status = 'Excellent';
+        savingStatus.color = '#28a745'; // green
+      } else if (savingsPercentage >= 30) {
+        savingStatus.status = 'Good';
+        savingStatus.color = '#ffc107'; // yellow
+      } else if (savingsPercentage >= 1) {
+        savingStatus.status = 'Average';
+        savingStatus.color = '#fd7e14'; // orange
+      } else {
+        savingStatus.status = 'No Saving';
+        savingStatus.color = '#dc3545'; // red
+      }
+    }
+
+    // Update user document
+    await User.findByIdAndUpdate(userId, {
+      totalIncome,
+      totalExpense,
+      totalBalance,
+      savingStatus
+    });
+
+    return { totalIncome, totalExpense, totalBalance, savingStatus };
+  } catch (error) {
+    console.error('Error updating user statistics:', error);
+    throw error;
+  }
+}
+
 // Routes
 app.get("/", (req, res) => {
   res.send("Budget Management API is running!");
@@ -119,19 +198,53 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
+// Get user profile with statistics
+app.get("/api/user/profile", getUserId, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    
+    res.json({
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        totalIncome: user.totalIncome || 0,
+        totalExpense: user.totalExpense || 0,
+        totalBalance: user.totalBalance || 0,
+        savingStatus: user.savingStatus || { status: 'No Data', color: '#6c757d' },
+        createdAt: user.createdAt
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching user profile:", error);
+    res.status(500).json({ error: "Failed to fetch user profile" });
+  }
+});
+
 // Transaction Routes - require userId
-// Get all transactions for the user with pagination
+// Get all transactions for the user with pagination and filtering
 app.get("/api/transactions", getUserId, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 5;
+    const filter = (req.query.filter && req.query.filter.trim()) || 'all'; // 'all', 'income', or 'expense'
     const skip = (page - 1) * limit;
     
-    // Get total count for pagination
-    const total = await Transaction.countDocuments({ user: req.userId });
+    // Build query with filter
+    const query = { user: req.userId };
+    if (filter && filter !== 'all' && (filter === 'income' || filter === 'expense')) {
+      query.type = filter;
+    }
     
-    // Get paginated transactions
-    const transactions = await Transaction.find({ user: req.userId })
+    // Get total count for pagination (with filter applied)
+    const total = await Transaction.countDocuments(query);
+    
+    // Get paginated transactions (with filter applied)
+    const transactions = await Transaction.find(query)
       .sort({ date: -1, createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -156,15 +269,65 @@ app.get("/api/transactions", getUserId, async (req, res) => {
       }
     ]);
     
-    const totalBalance = balanceResult.length > 0 
-      ? balanceResult[0].totalIncome - balanceResult[0].totalExpense 
-      : 0;
+    const totalIncome = balanceResult.length > 0 ? balanceResult[0].totalIncome : 0;
+    const totalExpense = balanceResult.length > 0 ? balanceResult[0].totalExpense : 0;
+    const totalBalance = totalIncome - totalExpense;
+    
+    // Calculate saving status
+    let savingStatus = {
+      status: '',
+      color: ''
+    };
+    
+    if (totalExpense > totalIncome) {
+      // Overspending
+      savingStatus.status = 'Overspending';
+      savingStatus.color = '#dc3545'; // red
+    } else if (totalIncome === 0 && totalExpense === 0) {
+      // No transactions
+      savingStatus.status = 'No Data';
+      savingStatus.color = '#6c757d'; // gray
+    } else if (totalIncome === 0) {
+      // Only expenses, no income
+      savingStatus.status = 'Overspending';
+      savingStatus.color = '#dc3545'; // red
+    } else if (totalExpense === totalIncome) {
+      // No saving
+      savingStatus.status = 'No Saving';
+      savingStatus.color = '#dc3545'; // red
+    } else {
+      // Calculate savings percentage
+      const savings = totalIncome - totalExpense;
+      const savingsPercentage = (savings / totalIncome) * 100;
+      
+      if (savingsPercentage >= 50) {
+        savingStatus.status = 'Excellent';
+        savingStatus.color = '#28a745'; // green
+      } else if (savingsPercentage >= 30) {
+        savingStatus.status = 'Good';
+        savingStatus.color = '#ffc107'; // yellow
+      } else if (savingsPercentage >= 1) {
+        savingStatus.status = 'Average';
+        savingStatus.color = '#fd7e14'; // orange
+      } else {
+        savingStatus.status = 'No Saving';
+        savingStatus.color = '#dc3545'; // red
+      }
+    }
     
     const totalPages = Math.ceil(total / limit);
+    
+    // Update user statistics in database (async, don't wait for it)
+    updateUserStatistics(req.userId).catch(err => {
+      console.error('Error updating user statistics:', err);
+    });
     
     res.json({
       transactions,
       totalBalance,
+      totalIncome,
+      totalExpense,
+      savingStatus,
       pagination: {
         currentPage: page,
         totalPages,
@@ -224,6 +387,10 @@ app.post("/api/transactions", getUserId, async (req, res) => {
     });
     
     const savedTransaction = await transaction.save();
+    
+    // Update user statistics
+    await updateUserStatistics(req.userId);
+    
     res.status(201).json(savedTransaction);
   } catch (error) {
     res.status(500).json({ error: "Failed to create transaction" });
@@ -263,6 +430,9 @@ app.put("/api/transactions/:id", getUserId, async (req, res) => {
       return res.status(404).json({ error: "Transaction not found" });
     }
     
+    // Update user statistics
+    await updateUserStatistics(req.userId);
+    
     res.json(transaction);
   } catch (error) {
     res.status(500).json({ error: "Failed to update transaction" });
@@ -280,6 +450,9 @@ app.delete("/api/transactions/:id", getUserId, async (req, res) => {
     if (!transaction) {
       return res.status(404).json({ error: "Transaction not found" });
     }
+    
+    // Update user statistics
+    await updateUserStatistics(req.userId);
     
     res.status(204).send();
   } catch (error) {
