@@ -53,7 +53,31 @@
                         <div class="profile-info">
                             <div class="info-item">
                                 <label>Name:</label>
-                                <span id="userName">-</span>
+                                <div class="name-edit-container">
+                                    <span id="userName" class="editable-name">-</span>
+                                    <div class="name-edit-buttons">
+                                        <button id="editNameBtn" class="edit-btn" onclick="editUserName()" title="Edit name">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                            </svg>
+                                            <span>Edit</span>
+                                        </button>
+                                        <button id="saveNameBtn" class="save-btn" onclick="saveUserName()" title="Save changes" style="display: none;">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                            </svg>
+                                            <span>Save</span>
+                                        </button>
+                                        <button id="cancelNameBtn" class="cancel-btn" onclick="cancelEditName()" title="Cancel editing" style="display: none;">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                                            </svg>
+                                            <span>Cancel</span>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                             <div class="info-item">
                                 <label>Email:</label>
@@ -159,6 +183,34 @@
         <div class="spinner-content">
             <div class="spinner"></div>
             <p class="spinner-text">Loading...</p>
+        </div>
+    </div>
+
+    <!-- Alert Popup -->
+    <div id="alertPopup" class="popup">
+        <div class="popup-content">
+            <div class="popup-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+            </div>
+            <div class="popup-message" id="alertMessage"></div>
+            <div class="popup-buttons">
+                <button class="btn btn-primary" onclick="closeAlert()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Popup -->
+    <div id="confirmPopup" class="popup">
+        <div class="popup-content">
+            <div class="popup-icon">❓</div>
+            <div class="popup-message" id="confirmMessage"></div>
+            <div class="popup-buttons">
+                <button class="btn btn-secondary" onclick="closeConfirm(false)">Cancel</button>
+                <button class="btn btn-primary" onclick="closeConfirm(true)">Confirm</button>
+            </div>
         </div>
     </div>
 

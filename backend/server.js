@@ -225,6 +225,43 @@ app.get("/api/user/profile", getUserId, async (req, res) => {
   }
 });
 
+// Update user profile (name only)
+app.put("/api/user/profile", getUserId, async (req, res) => {
+  try {
+    const { name } = req.body;
+    
+    // Validation
+    if (!name || name.trim().length === 0) {
+      return res.status(400).json({ error: "Name is required and cannot be empty" });
+    }
+    
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      { name: name.trim() },
+      { new: true, select: '-password' }
+    );
+    
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    
+    // Return user profile formatted like GET /user/profile for consistency
+    res.json({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      totalIncome: user.totalIncome || 0,
+      totalExpense: user.totalExpense || 0,
+      totalBalance: user.totalBalance || 0,
+      savingStatus: user.savingStatus || { status: 'No Data', color: '#6c757d' },
+      createdAt: user.createdAt
+    });
+  } catch (error) {
+    console.error("Error updating user profile:", error);
+    res.status(500).json({ error: "Failed to update user profile" });
+  }
+});
+
 // Transaction Routes - require userId
 // Get all transactions for the user with pagination and filtering
 app.get("/api/transactions", getUserId, async (req, res) => {
@@ -457,6 +494,185 @@ app.delete("/api/transactions/:id", getUserId, async (req, res) => {
     res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: "Failed to delete transaction" });
+  }
+});
+
+// Get monthly statistics for comparison (single month)
+app.get("/api/transactions/monthly", getUserId, async (req, res) => {
+  try {
+    const { month, year } = req.query;
+    
+    if (!month || !year) {
+      return res.status(400).json({ error: "Month and year are required" });
+    }
+    
+    // Validate userId
+    if (!req.userId) {
+      return res.status(400).json({ error: "User ID is required" });
+    }
+    
+    // Normalize month to have leading zero
+    const monthStr = String(month).padStart(2, '0');
+    const yearStr = String(year);
+    
+    // Validate month and year
+    const monthNum = parseInt(monthStr);
+    const yearNum = parseInt(yearStr);
+    
+    if (isNaN(monthNum) || monthNum < 1 || monthNum > 12) {
+      return res.status(400).json({ error: "Invalid month" });
+    }
+    
+    if (isNaN(yearNum) || yearNum < 2000 || yearNum > 2100) {
+      return res.status(400).json({ error: "Invalid year" });
+    }
+    
+    // Create regex pattern to match dates in the format YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss
+    // Pattern: YYYY-MM- where YYYY matches year and MM matches month
+    const datePattern = `^${yearStr}-${monthStr}-`;
+    
+    // Convert userId to ObjectId
+    let userIdObjectId;
+    try {
+      userIdObjectId = new mongoose.Types.ObjectId(req.userId);
+    } catch (error) {
+      return res.status(400).json({ error: "Invalid user ID format" });
+    }
+    
+    // Get transactions for the month using aggregation
+    // Since date is stored as string, we'll use regex to match the year-month pattern
+    const monthlyStats = await Transaction.aggregate([
+      {
+        $match: {
+          user: userIdObjectId,
+          date: { 
+            $regex: datePattern
+          }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          income: {
+            $sum: {
+              $cond: [{ $eq: ["$type", "income"] }, "$amount", 0]
+            }
+          },
+          expense: {
+            $sum: {
+              $cond: [{ $eq: ["$type", "expense"] }, "$amount", 0]
+            }
+          }
+        }
+      }
+    ]);
+    
+    const result = monthlyStats.length > 0 
+      ? { income: monthlyStats[0].income || 0, expense: monthlyStats[0].expense || 0 }
+      : { income: 0, expense: 0 };
+    
+    result.balance = result.income - result.expense;
+    
+    res.json(result);
+  } catch (error) {
+    console.error("Error fetching monthly statistics:", error);
+    console.error("Error stack:", error.stack);
+    console.error("Request query:", req.query);
+    console.error("Request userId:", req.userId);
+    res.status(500).json({ error: "Failed to fetch monthly statistics", details: error.message });
+  }
+});
+
+// Get monthly comparison for two months (optimized endpoint)
+app.get("/api/transactions/monthly/compare", getUserId, async (req, res) => {
+  try {
+    const { month1, year1, month2, year2 } = req.query;
+    
+    if (!month1 || !year1 || !month2 || !year2) {
+      return res.status(400).json({ error: "Both months and years are required" });
+    }
+    
+    // Validate userId
+    if (!req.userId) {
+      return res.status(400).json({ error: "User ID is required" });
+    }
+    
+    // Convert userId to ObjectId
+    let userIdObjectId;
+    try {
+      userIdObjectId = new mongoose.Types.ObjectId(req.userId);
+    } catch (error) {
+      return res.status(400).json({ error: "Invalid user ID format" });
+    }
+    
+    // Helper function to get monthly stats
+    const getMonthlyStats = async (month, year) => {
+      const monthStr = String(month).padStart(2, '0');
+      const yearStr = String(year);
+      
+      // Validate month and year
+      const monthNum = parseInt(monthStr);
+      const yearNum = parseInt(yearStr);
+      
+      if (isNaN(monthNum) || monthNum < 1 || monthNum > 12) {
+        throw new Error(`Invalid month: ${month}`);
+      }
+      
+      if (isNaN(yearNum) || yearNum < 2000 || yearNum > 2100) {
+        throw new Error(`Invalid year: ${year}`);
+      }
+      
+      const datePattern = `^${yearStr}-${monthStr}-`;
+      
+      const monthlyStats = await Transaction.aggregate([
+        {
+          $match: {
+            user: userIdObjectId,
+            date: { 
+              $regex: datePattern
+            }
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            income: {
+              $sum: {
+                $cond: [{ $eq: ["$type", "income"] }, "$amount", 0]
+              }
+            },
+            expense: {
+              $sum: {
+                $cond: [{ $eq: ["$type", "expense"] }, "$amount", 0]
+              }
+            }
+          }
+        }
+      ]);
+      
+      const result = monthlyStats.length > 0 
+        ? { income: monthlyStats[0].income || 0, expense: monthlyStats[0].expense || 0 }
+        : { income: 0, expense: 0 };
+      
+      result.balance = result.income - result.expense;
+      return result;
+    };
+    
+    // Get stats for both months in parallel
+    const [month1Stats, month2Stats] = await Promise.all([
+      getMonthlyStats(month1, year1),
+      getMonthlyStats(month2, year2)
+    ]);
+    
+    res.json({
+      month1: month1Stats,
+      month2: month2Stats
+    });
+  } catch (error) {
+    console.error("Error fetching monthly comparison:", error);
+    console.error("Error stack:", error.stack);
+    console.error("Request query:", req.query);
+    res.status(500).json({ error: "Failed to fetch monthly comparison", details: error.message });
   }
 });
 

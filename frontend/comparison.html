@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monthly Comparison - Budget Management System</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-top">
+                <div class="theme-toggle-container">
+                    <button class="theme-toggle-btn" id="themeToggle" onclick="toggleTheme()" aria-label="Toggle dark mode">
+                        <svg class="theme-icon sun-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="5"></circle>
+                            <line x1="12" y1="1" x2="12" y2="3"></line>
+                            <line x1="12" y1="21" x2="12" y2="23"></line>
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                            <line x1="1" y1="12" x2="3" y2="12"></line>
+                            <line x1="21" y1="12" x2="23" y2="12"></line>
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                        </svg>
+                        <svg class="theme-icon moon-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                        </svg>
+                    </button>
+                </div>
+                <h1>📊 Monthly Comparison</h1>
+                <div class="header-right">
+                    <a href="index.html" class="btn-back">← Back to Dashboard</a>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <section class="monthly-comparison-section">
+                <div class="section-header">
+                    <h2>Compare Two Months</h2>
+                </div>
+                <div class="comparison-selectors">
+                    <div class="month-selector-group">
+                        <label>Select First Month:</label>
+                        <div class="month-year-selector">
+                            <select id="month1Select" class="month-select" onchange="updateMonthSelector('month1')">
+                                <option value="01">January</option>
+                                <option value="02">February</option>
+                                <option value="03">March</option>
+                                <option value="04">April</option>
+                                <option value="05">May</option>
+                                <option value="06">June</option>
+                                <option value="07">July</option>
+                                <option value="08">August</option>
+                                <option value="09">September</option>
+                                <option value="10">October</option>
+                                <option value="11">November</option>
+                                <option value="12">December</option>
+                            </select>
+                            <select id="year1Select" class="year-select" onchange="updateMonthSelector('month1')">
+                            </select>
+                        </div>
+                    </div>
+                    <div class="month-selector-group">
+                        <label>Select Second Month:</label>
+                        <div class="month-year-selector">
+                            <select id="month2Select" class="month-select" onchange="updateMonthSelector('month2')">
+                                <option value="01">January</option>
+                                <option value="02">February</option>
+                                <option value="03">March</option>
+                                <option value="04">April</option>
+                                <option value="05">May</option>
+                                <option value="06">June</option>
+                                <option value="07">July</option>
+                                <option value="08">August</option>
+                                <option value="09">September</option>
+                                <option value="10">October</option>
+                                <option value="11">November</option>
+                                <option value="12">December</option>
+                            </select>
+                            <select id="year2Select" class="year-select" onchange="updateMonthSelector('month2')">
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary compare-btn" onclick="loadMonthlyComparison()">Compare</button>
+                </div>
+                <div class="comparison-container">
+                    <div class="comparison-card">
+                        <h3 id="month1Label">Month 1</h3>
+                        <div class="comparison-stats">
+                            <div class="comparison-stat-item">
+                                <span class="stat-label">Income</span>
+                                <span class="stat-value income-value" id="month1Income">₹0.00</span>
+                            </div>
+                            <div class="comparison-stat-item">
+                                <span class="stat-label">Expense</span>
+                                <span class="stat-value expense-value" id="month1Expense">₹0.00</span>
+                            </div>
+                            <div class="comparison-stat-item">
+                                <span class="stat-label">Balance</span>
+                                <span class="stat-value" id="month1Balance">₹0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="comparison-vs">
+                        <span>VS</span>
+                    </div>
+                    <div class="comparison-card">
+                        <h3 id="month2Label">Month 2</h3>
+                        <div class="comparison-stats">
+                            <div class="comparison-stat-item">
+                                <span class="stat-label">Income</span>
+                                <span class="stat-value income-value" id="month2Income">₹0.00</span>
+                            </div>
+                            <div class="comparison-stat-item">
+                                <span class="stat-label">Expense</span>
+                                <span class="stat-value expense-value" id="month2Expense">₹0.00</span>
+                            </div>
+                            <div class="comparison-stat-item">
+                                <span class="stat-label">Balance</span>
+                                <span class="stat-value" id="month2Balance">₹0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="loading-spinner">
+        <div class="spinner-content">
+            <div class="spinner"></div>
+            <p class="spinner-text">Loading...</p>
+        </div>
+    </div>
+
+    <!-- Alert Popup -->
+    <div id="alertPopup" class="popup">
+        <div class="popup-content">
+            <div class="popup-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+            </div>
+            <div class="popup-message" id="alertMessage"></div>
+            <div class="popup-buttons">
+                <button class="btn btn-primary" onclick="closeAlert()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="comparison.js"></script>
+</body>
+</html>
