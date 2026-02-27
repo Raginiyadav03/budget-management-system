@@ -2,8 +2,8 @@
 const API_BASE_URL = 'https://budget-management-api-tqch.onrender.com/api';
 
 // Check if we're on login or register page
-const isLoginPage = window.location.pathname.includes('login.html') || 
-                    (window.location.pathname.endsWith('/') && !window.location.pathname.includes('register.html'));
+const isLoginPage = window.location.pathname.includes('login.html') ||
+    (window.location.pathname.endsWith('/') && !window.location.pathname.includes('register.html'));
 const isRegisterPage = window.location.pathname.includes('register.html');
 
 // Loading functions
@@ -54,20 +54,20 @@ function showSuccess(message) {
 // Handle login form submission
 if (isLoginPage) {
     const loginForm = document.getElementById('loginForm');
-    
+
     if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
-            
+
             // Clear previous errors
             const errorDiv = document.getElementById('errorMessage');
             if (errorDiv) {
                 errorDiv.classList.remove('show');
             }
-            
+
             showLoading();
             try {
                 const response = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -77,14 +77,14 @@ if (isLoginPage) {
                     },
                     body: JSON.stringify({ email, password })
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (response.ok) {
                     // Store user info in localStorage
                     localStorage.setItem('user', JSON.stringify(data.user));
                     localStorage.setItem('userId', data.user.id);
-                    
+
                     // Redirect to main page
                     window.location.href = 'index.html';
                 } else {
@@ -103,33 +103,33 @@ if (isLoginPage) {
 // Handle register form submission
 if (isRegisterPage) {
     const registerForm = document.getElementById('registerForm');
-    
+
     if (registerForm) {
         registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const name = document.getElementById('name').value.trim();
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
-            
+
             // Clear previous errors
             const errorDiv = document.getElementById('errorMessage');
             if (errorDiv) {
                 errorDiv.classList.remove('show');
             }
-            
+
             // Client-side validation
             if (password !== confirmPassword) {
                 showError('Passwords do not match!');
                 return;
             }
-            
+
             if (password.length < 6) {
                 showError('Password must be at least 6 characters long!');
                 return;
             }
-            
+
             showLoading();
             try {
                 const response = await fetch(`${API_BASE_URL}/auth/register`, {
@@ -139,14 +139,14 @@ if (isRegisterPage) {
                     },
                     body: JSON.stringify({ name, email, password })
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (response.ok) {
                     // Store user info in localStorage
                     localStorage.setItem('user', JSON.stringify(data.user));
                     localStorage.setItem('userId', data.user.id);
-                    
+
                     hideLoading();
                     showSuccess('Registration successful! Redirecting to home page...');
                     setTimeout(() => {
@@ -178,10 +178,10 @@ function checkAuth() {
 checkAuth();
 
 // Toggle password visibility
-window.togglePassword = function(inputId) {
+window.togglePassword = function (inputId) {
     const input = document.getElementById(inputId);
     const toggle = input.nextElementSibling;
-    
+
     if (input.type === 'password') {
         input.type = 'text';
         toggle.textContent = '🙈';
