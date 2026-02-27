@@ -638,9 +638,10 @@ window.changeItemsPerPage = function() {
 // Display pagination controls
 function displayPagination() {
     const paginationContainer = document.getElementById('paginationContainer');
-    
+    const itemsPerPageContainer = document.getElementById('itemsPerPageContainer');
     if (!paginationData || paginationData.totalPages <= 1) {
         paginationContainer.innerHTML = '';
+        itemsPerPageContainer.innerHTML = '';
         return;
     }
     
@@ -695,6 +696,12 @@ function displayPagination() {
     paginationHTML += `<div class="pagination-info">Showing ${((paginationData.currentPage - 1) * paginationData.itemsPerPage) + 1} - ${Math.min(paginationData.currentPage * paginationData.itemsPerPage, paginationData.totalItems)} of ${paginationData.totalItems} transactions</div>`;
     
     paginationContainer.innerHTML = paginationHTML;
+    itemsPerPageContainer.innerHTML = `<label for="itemsPerPage">Show:</label>
+    <select id="itemsPerPage" onchange="changeItemsPerPage()">
+        <option value="5" selected>5</option>
+        <option value="10">10</option>
+        <option value="15">15</option>
+    </select>`;
 }
 
 // Go to specific page
